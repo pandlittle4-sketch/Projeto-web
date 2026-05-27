@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helper methods
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity validator: UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['displayName', 'level', 'xp', 'medalhas', 'progress'])
+        && (data.keys().size() == 5 || (data.keys().size() == 6 && data.keys().hasAll(['genero'])))
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 100
+        && data.level is int
+        && data.level >= 1
+        && data.level <= 1000
+        && data.xp is int
+        && data.xp >= 0
+        && data.xp <= 10000000
+        && data.medalhas is list
+        && data.progress is map
+        && (!data.keys().hasAll(['genero']) || (data.genero is string && data.genero.size() <= 100));
+    }
+
+    // Entity validator: UserPrivateInfo
+    function isValidUserPrivateInfo(data) {
+      return data.keys().hasAll(['email', 'nomeCompleto', 'createdAt', 'userId'])
+        && (data.keys().size() == 4 || (data.keys().size() == 5 && data.keys().hasAll(['genero'])))
+        && data.email is string
+        && data.email.size() >= 3
+        && data.email.size() <= 200
+        && data.nomeCompleto is string
+        && data.nomeCompleto.size() >= 1
+        && data.nomeCompleto.size() <= 200
+        && data.createdAt is string
+        && data.createdAt.size() <= 128
+        && data.userId is string
+        && data.userId == request.auth.uid
+        && (!data.keys().hasAll(['genero']) || (data.genero is string && data.genero.size() <= 100));
+    }
+
+    // Entity validator: ComplementaryMaterial
+    function isValidComplementaryMaterial(data) {
+      return data.keys().hasAll(['id', 'lessonId', 'title', 'type', 'createdAt'])
+        && (data.keys().size() == 5 
+            || (data.keys().size() == 6 && (data.keys().hasAll(['fileData']) || data.keys().hasAll(['url'])))
+            || (data.keys().size() == 7 && data.keys().hasAll(['fileData', 'url'])))
+        && data.id is string
+        && data.id.size() <= 128
+        && data.lessonId is string
+        && data.lessonId.size() <= 128
+        && data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 200
+        && data.type is string
+        && (data.type == 'pdf' || data.type == 'excel' || data.type == 'word' || data.type == 'link' || data.type == 'other')
+        && data.createdAt is string
+        && data.createdAt.size() <= 128
+        && (!data.keys().hasAll(['fileData']) || data.fileData is string)
+        && (!data.keys().hasAll(['url']) || (data.url is string && data.url.size() <= 2000));
+    }
+
+    // Rules matching blueprint
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // leaderboard access is allowed for signed in users
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId)
+        && isValidUserProfile(incoming());
+    }
+
+    match /users/{userId}/private/info {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserPrivateInfo(incoming());
+
+      allow update: if isOwner(userId)
+        && isValidUserPrivateInfo(incoming())
+        && incoming().userId == existing().userId
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt;
+    }
+
+    match /materials/{materialId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() 
+        && (request.auth.token.email == 'adailtonc716@gmail.com' || request.auth.token.email == 'adailton092991260204@gmail.com') 
+        && isValidComplementaryMaterial(incoming());
+      allow delete: if isSignedIn() && (request.auth.token.email == 'adailtonc716@gmail.com' || request.auth.token.email == 'adailton092991260204@gmail.com');
+    }
+  }
+}

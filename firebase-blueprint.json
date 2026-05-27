@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public user stats including levels, total XP, current medals, and progression string representation.",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "Public nick name derived from full name"
+        },
+        "level": {
+          "type": "integer",
+          "description": "Current player level"
+        },
+        "xp": {
+          "type": "integer",
+          "description": "Total XP accumulated"
+        },
+        "medalhas": {
+          "type": "array",
+          "description": "List of unlocked medal IDs"
+        },
+        "progress": {
+          "type": "object",
+          "description": "Native nested mapping representing completed lessons, exercises, and scores per unit."
+        },
+        "genero": {
+          "type": "string",
+          "description": "User's self-declared gender identity"
+        }
+      },
+      "required": ["displayName", "level", "xp", "medalhas", "progress"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Strictly isolated private PII structure containing full name, email, and sign up coordinates.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "nomeCompleto": {
+          "type": "string",
+          "description": "Full formal name"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating registration date"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Authentication UID coordinate"
+        },
+        "genero": {
+          "type": "string",
+          "description": "User's self-declared gender identity"
+        }
+      },
+      "required": ["email", "nomeCompleto", "createdAt", "userId"]
+    },
+    "ComplementaryMaterial": {
+      "title": "ComplementaryMaterial",
+      "description": "Material complementar como PDFs, Word ou Planilhas vinculados a aulas e vídeos.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lessonId": {
+          "type": "string",
+          "description": "Id da aula correspondente, ex: aula11"
+        },
+        "title": {
+          "type": "string",
+          "description": "Título descritivo do material"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["pdf", "excel", "word", "link", "other"]
+        },
+        "fileData": {
+          "type": "string",
+          "description": "Dados da planilha ou pdf em Base64 ou link direto"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL web opcional para o link externo"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "lessonId", "title", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Gamified user profile database visible in leaderboards"
+    },
+    "/users/{userId}/private/info": {
+      "schema": "UserPrivateInfo",
+      "description": "Secure, private personal records that only the owner can read"
+    },
+    "/materials/{materialId}": {
+      "schema": "ComplementaryMaterial",
+      "description": "Banco de materiais complementares adicionados por administradores"
+    }
+  }
+}
